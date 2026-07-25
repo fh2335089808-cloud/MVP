@@ -1,0 +1,13 @@
+{
+  "id": "feishu_bitable_manage_crud_agg_analysis_1",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "飞书多维表格",
+  "description": "管理飞书多维表格，支持数据的创建、查询、更新、删除、聚合分析",
+  "icon": "https://lf3-static.bytednsdoc.com/obj/eden-cn/fzgeh7nuhfboznulog/bitable.svg",
+  "paramsSchema": {},
+  "formValue": {},
+  "createdAt": 1784828487024,
+  "updatedAt": 1784828487024,
+  "createdBy": 7366252962768748547
+}

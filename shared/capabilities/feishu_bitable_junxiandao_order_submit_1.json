@@ -1,0 +1,197 @@
+{
+  "id": "feishu_bitable_junxiandao_order_submit_1",
+  "pluginKey": "@official-plugins/feishu-bitable",
+  "pluginVersion": "1.0.22",
+  "name": "菌鲜到野生菌订购数据写入多维表格",
+  "description": "接收菌鲜到野生菌订购登记表单的提交数据，将用户填写的订购信息批量写入飞书多维表格",
+  "icon": "",
+  "paramsSchema": {},
+  "formValue": {
+    "tableID": "tblnlCUjapns8blD",
+    "fields": [
+      {
+        "type": 1005,
+        "bizType": "AutoNumber",
+        "readable": true,
+        "writeable": false,
+        "id": "fldMiEb01Z",
+        "name": "订单编号"
+      },
+      {
+        "name": "姓名",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true,
+        "id": "fldBRPSYDz"
+      },
+      {
+        "writeable": true,
+        "id": "fldN6sJ51p",
+        "name": "联系电话",
+        "type": 13,
+        "bizType": "Phone",
+        "readable": true
+      },
+      {
+        "id": "fldVP1SCfQ",
+        "readable": true,
+        "writeable": true,
+        "name": "微信号",
+        "type": 1,
+        "bizType": "Text"
+      },
+      {
+        "bizType": "MultiSelect",
+        "enumValues": [
+          "鸡枞菌",
+          "青头菌",
+          "松茸",
+          "牛肝菌",
+          "其他当季野生菌"
+        ],
+        "id": "fldJ98PD2S",
+        "name": "需要的野生菌",
+        "readable": true,
+        "writeable": true,
+        "type": 4
+      },
+      {
+        "id": "fldIbtM3tJ",
+        "name": "购买数量",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "name": "其他数量",
+        "type": 1,
+        "bizType": "Text",
+        "id": "fldKjjyVD4",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "writeable": true,
+        "name": "配送方式",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "官渡区同城配送",
+          "到店自取",
+          "外地寄送咨询"
+        ],
+        "id": "fldzT4EHeD",
+        "readable": true
+      },
+      {
+        "id": "fldoLfJRPC",
+        "name": "配送地址",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "id": "fldvRABILc",
+        "name": "期望送达时间",
+        "type": 1,
+        "bizType": "Text"
+      },
+      {
+        "bizType": "DateTime",
+        "id": "fldsjoH6eL",
+        "name": "预约日期",
+        "readable": true,
+        "writeable": true,
+        "type": 5
+      },
+      {
+        "writeable": true,
+        "id": "flde6yMXiu",
+        "name": "其他需求",
+        "type": 1,
+        "bizType": "Text",
+        "readable": true
+      },
+      {
+        "writeable": true,
+        "name": "客户来源",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "网页访问",
+          "微信推荐",
+          "抖音",
+          "线下",
+          "其他"
+        ],
+        "id": "fldTCqkmQe",
+        "readable": true
+      },
+      {
+        "id": "fldRh7GeL6",
+        "readable": true,
+        "writeable": true,
+        "name": "订单状态",
+        "type": 3,
+        "bizType": "SingleSelect",
+        "enumValues": [
+          "待确认",
+          "已确认",
+          "配货中",
+          "配送中",
+          "已完成",
+          "已取消"
+        ]
+      },
+      {
+        "name": "确认时间",
+        "type": 5,
+        "bizType": "DateTime",
+        "id": "fldZFAzrtL",
+        "readable": true,
+        "writeable": true
+      },
+      {
+        "bizType": "User",
+        "readable": true,
+        "writeable": true,
+        "id": "fldYImdyV3",
+        "name": "确认人",
+        "type": 11
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "name": "确认备注",
+        "type": 1,
+        "bizType": "Text",
+        "id": "fldH8maBpN"
+      },
+      {
+        "id": "fldXzXos9d",
+        "name": "提交时间",
+        "type": 1001,
+        "bizType": "CreatedTime",
+        "readable": true,
+        "writeable": false
+      },
+      {
+        "readable": true,
+        "writeable": true,
+        "id": "fldAa6Mc4J",
+        "name": "备注",
+        "type": 1,
+        "bizType": "Text"
+      }
+    ],
+    "appToken": "CjKUbwR8Saapa1sTu0ac42y8ndc"
+  },
+  "createdAt": 1784822340710,
+  "updatedAt": 1784825140405,
+  "createdBy": 7366252962768748547
+}
