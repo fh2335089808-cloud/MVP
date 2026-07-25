@@ -26,6 +26,7 @@ import { MOCK_FORM_OPTIONS } from '@/data/formoptions';
 
 const DRAFT_KEY = 'order_form_draft';
 const SUBMIT_API_PATH = '/api/order/submit';
+const SUBMIT_TIMEOUT_MS = 12_000;
 
 const formSchema = z.object({
   name: z.string().min(1, '请填写姓名'),
@@ -140,24 +141,32 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
     if (data.src) payload.src = data.src;
 
     try {
-      const resp = await axiosForBackend.post(SUBMIT_API_PATH, payload);
-      const result = resp.data as { success?: boolean; recordId?: string; error?: string };
+      const resp = await axiosForBackend.post(SUBMIT_API_PATH, payload, {
+        timeout: SUBMIT_TIMEOUT_MS,
+        headers: { 'Idempotency-Key': globalThis.crypto.randomUUID() },
+      });
+      const result = resp.data as {
+        success?: boolean;
+        recordId?: string;
+        error?: string;
+        code?: string;
+      };
 
       if (!result.success) {
         throw new Error(result.error || '提交失败');
       }
 
-      logger.info('[订单] 提交成功，记录ID:', result.recordId);
+      logger.info('[订单] 提交成功', { recordId: result.recordId });
     } catch (err) {
-      const errMsg = String(err);
-      logger.error('[订单] 提交失败:', errMsg);
-      if (errMsg.includes('无权限') || errMsg.includes('权限配置') || errMsg.includes('登录后操作')) {
-        toast.error('提交失败：系统权限配置有误，请联系工作人员');
-      } else if (errMsg.includes('参数校验') || errMsg.includes('不能为空') || errMsg.includes('格式不正确')) {
-        toast.error(errMsg);
-      } else {
-        toast.error('提交失败，请稍后重试');
-      }
+      const requestError = err as {
+        code?: string;
+        response?: { status?: number; data?: { error?: string; code?: string } };
+      };
+      logger.error('[订单] 提交失败', {
+        status: requestError.response?.status,
+        code: requestError.response?.data?.code ?? requestError.code,
+      });
+      toast.error(requestError.response?.data?.error || '提交失败，请稍后重试');
       return;
     }
 

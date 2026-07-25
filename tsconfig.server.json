@@ -10,8 +10,8 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "outDir": "dist-server",
-    "rootDir": "server",
+    "rootDir": ".",
     "types": ["node"]
   },
-  "include": ["server/**/*.ts"]
+  "include": ["server/**/*.ts", "api/**/*.ts"]
 }

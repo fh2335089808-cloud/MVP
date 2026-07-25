@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "concurrently --kill-others --names frontend,backend \"vite --host 127.0.0.1\" \"tsx watch server/index.ts\"",
+    "dev": "concurrently --kill-others --names frontend,backend \"vite --host 127.0.0.1\" \"node --import tsx server/index.ts\"",
     "build": "vite build && tsc -p tsconfig.server.json",
-    "start": "node dist-server/index.js",
+    "start": "node dist-server/server/index.js",
     "typecheck": "tsc -p tsconfig.app.json",
     "lint": "concurrently npm:typecheck npm:lint:eslint",
     "lint:eslint": "eslint src",
