@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Leaf, Phone, MapPin } from 'lucide-react';
+import { ArrowLeft, Leaf, Phone, MapPin } from 'lucide-react';
 import OrderFormSection from './OrderFormSection';
 
 export default function OrderFormPage() {
   const [searchParams] = useSearchParams();
   const [src, setSrc] = useState<string | undefined>(undefined);
+  const returnHref =
+    searchParams.get('source') === 'vercel'
+      ? 'https://kunming-mushroom-mvp.vercel.app'
+      : 'https://www.kunming-mushroom.asia';
 
   useEffect(() => {
     const srcParam = searchParams.get('src');
@@ -17,6 +21,18 @@ export default function OrderFormPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF8F3]">
+      <nav aria-label="订单页导航" className="border-b border-[#D4D8CD] bg-[#FAF8F3]">
+        <div className="mx-auto flex max-w-2xl px-4 py-3 md:px-6">
+          <a
+            href={returnHref}
+            className="inline-flex items-center gap-2 text-sm font-medium text-[#4A5D42] transition-colors hover:text-[#243024] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#4A5D42] focus-visible:ring-offset-2"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            返回菌鲜到首页
+          </a>
+        </div>
+      </nav>
+
       {/* Hero 区 */}
       <section className="relative w-full">
         <div className="relative h-48 w-full overflow-hidden md:h-64">
@@ -66,7 +82,7 @@ export default function OrderFormPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.25, ease: [0.16, 1, 0.3, 1] }}
           >
-            <OrderFormSection initialSrc={src} />
+            <OrderFormSection initialSrc={src} returnHref={returnHref} />
           </motion.div>
 
           {/* 底部联系信息 */}

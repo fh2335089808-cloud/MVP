@@ -55,10 +55,15 @@ type FormData = z.infer<typeof formSchema>;
 
 interface OrderFormSectionProps {
   initialSrc?: string;
+  returnHref: string;
   onSubmitSuccess?: () => void;
 }
 
-export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderFormSectionProps) {
+export default function OrderFormSection({
+  initialSrc,
+  returnHref,
+  onSubmitSuccess,
+}: OrderFormSectionProps) {
   const options = MOCK_FORM_OPTIONS;
   const idempotencyKeyRef = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -272,13 +277,18 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
         <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-[#6B7280] md:text-base">
           {submissionResult?.message ?? options.successMessage}
         </p>
-        <Button
-          variant="outline"
-          className="mt-8 border-[#D4D8CD] text-[#4A5D42] hover:bg-[#4A5D42]/5 hover:text-[#4A5D42]"
-          onClick={handleReset}
-        >
-          再登记一份
-        </Button>
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Button
+            variant="outline"
+            className="w-full border-[#D4D8CD] text-[#4A5D42] hover:bg-[#4A5D42]/5 hover:text-[#4A5D42] sm:w-auto"
+            onClick={handleReset}
+          >
+            再登记一份
+          </Button>
+          <Button asChild className="w-full bg-[#4A5D42] hover:bg-[#3E5038] sm:w-auto">
+            <a href={returnHref}>返回首页</a>
+          </Button>
+        </div>
       </motion.div>
     );
   }
