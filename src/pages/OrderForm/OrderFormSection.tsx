@@ -4,8 +4,6 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { Check, Info, Loader2, Leaf } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { toast } from 'sonner';
-import { logger, scopedStorage, axiosForBackend } from '@lark-apaas/client-toolkit-lite';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -58,9 +56,10 @@ interface OrderFormSectionProps {
 export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderFormSectionProps) {
   const options = MOCK_FORM_OPTIONS;
   const idempotencyKeyRef = useRef<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(() => {
     try {
-      return Boolean(scopedStorage.getItem(SUBMISSION_RECEIPT_KEY));
+      return Boolean(window.localStorage.getItem(SUBMISSION_RECEIPT_KEY));
     } catch {
       return false;
     }
@@ -69,12 +68,12 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
   const defaultValues = useMemo<FormData>(() => {
     let draft: Partial<FormData> = {};
     try {
-      const saved = scopedStorage.getItem(DRAFT_KEY);
+      const saved = window.localStorage.getItem(DRAFT_KEY);
       if (saved) {
         draft = JSON.parse(saved) as Partial<FormData>;
       }
     } catch (err) {
-      logger.warn('读取草稿失败:', String(err));
+      console.warn('读取草稿失败:', String(err));
     }
     return {
       name: '',
@@ -117,9 +116,9 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
 
     const timer = setTimeout(() => {
       try {
-        scopedStorage.setItem(DRAFT_KEY, JSON.stringify(allValues));
+        window.localStorage.setItem(DRAFT_KEY, JSON.stringify(allValues));
       } catch (err) {
-        logger.warn('保存草稿失败:', String(err));
+        console.warn('保存草稿失败:', String(err));
       }
     }, 500);
     return () => clearTimeout(timer);
@@ -129,21 +128,21 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
     if (idempotencyKeyRef.current) return idempotencyKeyRef.current;
 
     try {
-      const savedKey = scopedStorage.getItem(IDEMPOTENCY_KEY);
+      const savedKey = window.localStorage.getItem(IDEMPOTENCY_KEY);
       if (savedKey) {
         idempotencyKeyRef.current = savedKey;
         return savedKey;
       }
     } catch (err) {
-      logger.warn('读取提交标识失败:', String(err));
+      console.warn('读取提交标识失败:', String(err));
     }
 
     const newKey = globalThis.crypto.randomUUID();
     idempotencyKeyRef.current = newKey;
     try {
-      scopedStorage.setItem(IDEMPOTENCY_KEY, newKey);
+      window.localStorage.setItem(IDEMPOTENCY_KEY, newKey);
     } catch (err) {
-      logger.warn('保存提交标识失败:', String(err));
+      console.warn('保存提交标识失败:', String(err));
     }
     return newKey;
   };
@@ -174,70 +173,77 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
     if (data.remarks) payload.remarks = data.remarks;
     if (data.src) payload.src = data.src;
 
+    setSubmitError(null);
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), SUBMIT_TIMEOUT_MS);
+
     try {
-      const resp = await axiosForBackend.post(SUBMIT_API_PATH, payload, {
-        timeout: SUBMIT_TIMEOUT_MS,
-        headers: { 'Idempotency-Key': getIdempotencyKey() },
+      const response = await fetch(SUBMIT_API_PATH, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Idempotency-Key': getIdempotencyKey(),
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal,
       });
-      const result = resp.data as {
+
+      const result = await response.json().catch(() => null) as {
         success?: boolean;
         recordId?: string;
         error?: string;
         code?: string;
-      };
+      } | null;
 
-      if (!result.success) {
-        throw new Error(result.error || '提交失败');
+      if (!response.ok || !result?.success) {
+        setSubmitError(result?.error || '提交失败，请稍后重试；您填写的内容已保留。');
+        console.error('[订单] 提交失败', { status: response.status, code: result?.code });
+        return;
       }
 
-      logger.info('[订单] 提交成功', { recordId: result.recordId });
-
+      console.info('[订单] 提交成功', { recordId: result.recordId });
       try {
-        scopedStorage.removeItem(DRAFT_KEY);
-        scopedStorage.setItem(
+        window.localStorage.removeItem(DRAFT_KEY);
+        window.localStorage.setItem(
           SUBMISSION_RECEIPT_KEY,
           JSON.stringify({ recordId: result.recordId ?? null }),
         );
       } catch (storageError) {
-        logger.warn('保存提交结果失败:', String(storageError));
+        console.warn('保存提交结果失败:', String(storageError));
       }
 
       setIsSubmitted(true);
-      toast.success('登记已收到', {
-        description: '工作人员会通过微信或电话联系您确认品相、价格、配送费用和送达时间。',
-        duration: 8_000,
-      });
       try {
         onSubmitSuccess?.();
       } catch (callbackError) {
-        logger.error('[订单] 成功回调执行失败', {
+        console.error('[订单] 成功回调执行失败', {
           error: callbackError instanceof Error ? callbackError.message : String(callbackError),
         });
       }
-    } catch (err) {
-      const requestError = err as {
-        code?: string;
-        response?: { status?: number; data?: { error?: string; code?: string } };
-      };
-      logger.error('[订单] 提交失败', {
-        status: requestError.response?.status,
-        code: requestError.response?.data?.code ?? requestError.code,
+    } catch (error) {
+      const message = error instanceof DOMException && error.name === 'AbortError'
+        ? '提交超时，请检查网络后重试；您填写的内容已保留。'
+        : '网络连接异常，请稍后重试；您填写的内容已保留。';
+      setSubmitError(message);
+      console.error('[订单] 请求异常', {
+        error: error instanceof Error ? error.name : 'UnknownError',
       });
-      toast.error(requestError.response?.data?.error || '提交失败，请稍后重试');
-      return;
+    } finally {
+      window.clearTimeout(timeout);
     }
   };
 
   const handleReset = () => {
     try {
-      scopedStorage.removeItem(DRAFT_KEY);
-      scopedStorage.removeItem(IDEMPOTENCY_KEY);
-      scopedStorage.removeItem(SUBMISSION_RECEIPT_KEY);
+      window.localStorage.removeItem(DRAFT_KEY);
+      window.localStorage.removeItem(IDEMPOTENCY_KEY);
+      window.localStorage.removeItem(SUBMISSION_RECEIPT_KEY);
     } catch (err) {
-      logger.warn('清除草稿失败:', String(err));
+      console.warn('清除草稿失败:', String(err));
     }
     idempotencyKeyRef.current = null;
     form.reset();
+    setSubmitError(null);
     setIsSubmitted(false);
   };
 
@@ -685,6 +691,15 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
                 ))}
               </ul>
             </div>
+
+            {submitError && (
+              <div
+                role="alert"
+                className="rounded-md border border-[#C0392B]/30 bg-[#C0392B]/5 px-4 py-3 text-sm leading-relaxed text-[#8E2F23]"
+              >
+                {submitError}
+              </div>
+            )}
 
             {/* 提交按钮 */}
             <Button

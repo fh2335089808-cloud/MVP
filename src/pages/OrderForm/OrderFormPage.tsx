@@ -2,10 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Leaf, Phone, MapPin } from 'lucide-react';
-import { Image } from '@/components/ui/image';
 import OrderFormSection from './OrderFormSection';
-
-const HERO_IMAGE = '/spark/app/app_17aq22wyyy0/runtime/api/v1/storage/object/bucket_aadkmix5t46eq_static/static%2Faadkmivd5tggq_ve_miaoda';
 
 export default function OrderFormPage() {
   const [searchParams] = useSearchParams();
@@ -23,10 +20,9 @@ export default function OrderFormPage() {
       {/* Hero 区 */}
       <section className="relative w-full">
         <div className="relative h-48 w-full overflow-hidden md:h-64">
-          <Image
-            src={HERO_IMAGE}
-            alt="云南野生菌自然森林"
-            className="h-full w-full object-cover"
+          <div
+            aria-hidden="true"
+            className="h-full w-full bg-[radial-gradient(circle_at_25%_20%,rgba(111,127,99,0.9),transparent_38%),radial-gradient(circle_at_75%_35%,rgba(74,93,66,0.85),transparent_42%),linear-gradient(145deg,#243024_0%,#4A5D42_48%,#8A927B_100%)]"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-[#171611]/30 via-[#171611]/20 to-[#FAF8F3]" />
           <div className="absolute inset-0 flex items-center justify-center">
