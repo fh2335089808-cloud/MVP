@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
@@ -25,6 +25,8 @@ import {
 import { MOCK_FORM_OPTIONS } from '@/data/formoptions';
 
 const DRAFT_KEY = 'order_form_draft';
+const IDEMPOTENCY_KEY = 'order_form_idempotency_key';
+const SUBMISSION_RECEIPT_KEY = 'order_form_submission_receipt';
 const SUBMIT_API_PATH = '/api/order/submit';
 const SUBMIT_TIMEOUT_MS = 12_000;
 
@@ -55,6 +57,14 @@ interface OrderFormSectionProps {
 
 export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderFormSectionProps) {
   const options = MOCK_FORM_OPTIONS;
+  const idempotencyKeyRef = useRef<string | null>(null);
+  const [isSubmitted, setIsSubmitted] = useState(() => {
+    try {
+      return Boolean(scopedStorage.getItem(SUBMISSION_RECEIPT_KEY));
+    } catch {
+      return false;
+    }
+  });
 
   const defaultValues = useMemo<FormData>(() => {
     let draft: Partial<FormData> = {};
@@ -98,12 +108,13 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
   const showAppointmentDate = watchDeliveryTime === '预约其他日期';
 
   const isSubmitting = form.formState.isSubmitting;
-  const isSubmitSuccessful = form.formState.isSubmitSuccessful;
 
   // 自动保存草稿
   const allValues = form.watch();
 
   useEffect(() => {
+    if (isSubmitted) return;
+
     const timer = setTimeout(() => {
       try {
         scopedStorage.setItem(DRAFT_KEY, JSON.stringify(allValues));
@@ -112,7 +123,30 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
       }
     }, 500);
     return () => clearTimeout(timer);
-  }, [allValues]);
+  }, [allValues, isSubmitted]);
+
+  const getIdempotencyKey = () => {
+    if (idempotencyKeyRef.current) return idempotencyKeyRef.current;
+
+    try {
+      const savedKey = scopedStorage.getItem(IDEMPOTENCY_KEY);
+      if (savedKey) {
+        idempotencyKeyRef.current = savedKey;
+        return savedKey;
+      }
+    } catch (err) {
+      logger.warn('读取提交标识失败:', String(err));
+    }
+
+    const newKey = globalThis.crypto.randomUUID();
+    idempotencyKeyRef.current = newKey;
+    try {
+      scopedStorage.setItem(IDEMPOTENCY_KEY, newKey);
+    } catch (err) {
+      logger.warn('保存提交标识失败:', String(err));
+    }
+    return newKey;
+  };
 
   const onSubmit = async (data: FormData) => {
     // 预约日期：转换为 Unix 时间戳（毫秒），仅当选择了预约其他日期且填写了日期时写入
@@ -143,7 +177,7 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
     try {
       const resp = await axiosForBackend.post(SUBMIT_API_PATH, payload, {
         timeout: SUBMIT_TIMEOUT_MS,
-        headers: { 'Idempotency-Key': globalThis.crypto.randomUUID() },
+        headers: { 'Idempotency-Key': getIdempotencyKey() },
       });
       const result = resp.data as {
         success?: boolean;
@@ -157,6 +191,29 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
       }
 
       logger.info('[订单] 提交成功', { recordId: result.recordId });
+
+      try {
+        scopedStorage.removeItem(DRAFT_KEY);
+        scopedStorage.setItem(
+          SUBMISSION_RECEIPT_KEY,
+          JSON.stringify({ recordId: result.recordId ?? null }),
+        );
+      } catch (storageError) {
+        logger.warn('保存提交结果失败:', String(storageError));
+      }
+
+      setIsSubmitted(true);
+      toast.success('登记已收到', {
+        description: '工作人员会通过微信或电话联系您确认品相、价格、配送费用和送达时间。',
+        duration: 8_000,
+      });
+      try {
+        onSubmitSuccess?.();
+      } catch (callbackError) {
+        logger.error('[订单] 成功回调执行失败', {
+          error: callbackError instanceof Error ? callbackError.message : String(callbackError),
+        });
+      }
     } catch (err) {
       const requestError = err as {
         code?: string;
@@ -169,26 +226,22 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
       toast.error(requestError.response?.data?.error || '提交失败，请稍后重试');
       return;
     }
-
-    try {
-      scopedStorage.removeItem(DRAFT_KEY);
-    } catch (err) {
-      logger.warn('清除草稿失败:', String(err));
-    }
-    toast.success('提交成功');
-    onSubmitSuccess?.();
   };
 
   const handleReset = () => {
     try {
       scopedStorage.removeItem(DRAFT_KEY);
+      scopedStorage.removeItem(IDEMPOTENCY_KEY);
+      scopedStorage.removeItem(SUBMISSION_RECEIPT_KEY);
     } catch (err) {
       logger.warn('清除草稿失败:', String(err));
     }
+    idempotencyKeyRef.current = null;
     form.reset();
+    setIsSubmitted(false);
   };
 
-  if (isSubmitSuccessful) {
+  if (isSubmitted) {
     return (
       <motion.div
         initial={{ opacity: 0, y: 12 }}
