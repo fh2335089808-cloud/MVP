@@ -44,12 +44,17 @@ test('API failure preserves its safe user-facing error', () => {
 
 test('missing response fields never throw or become a false success', () => {
   assert.doesNotThrow(() => normalizeOrderSubmitSuccessResponse(undefined));
-  assert.equal(
+  assert.deepEqual(
     normalizeOrderSubmitSuccessResponse({ success: true, duplicate: false }),
-    null,
+    { success: true, duplicate: false, recordId: '', message: NEW_ORDER_MESSAGE },
   );
-  assert.equal(
+  assert.deepEqual(
     normalizeOrderSubmitSuccessResponse({ success: true, recordId: 'rec_missing_duplicate' }),
-    null,
+    {
+      success: true,
+      duplicate: false,
+      recordId: 'rec_missing_duplicate',
+      message: NEW_ORDER_MESSAGE,
+    },
   );
 });

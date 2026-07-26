@@ -8,6 +8,7 @@
     "build": "vite build && tsc -p tsconfig.server.json",
     "start": "node dist-server/server/index.js",
     "test": "node --import tsx --test tests/**/*.test.ts",
+    "test:ui": "playwright test",
     "typecheck": "tsc -p tsconfig.app.json",
     "lint": "concurrently npm:typecheck npm:lint:eslint",
     "lint:eslint": "eslint src",
@@ -83,6 +84,7 @@
   "devDependencies": {
     "@lark-apaas/coding-preset-vite-react": "^1.0.14",
     "@lark-apaas/coding-presets-react": "^0.1.0",
+    "@playwright/test": "^1.62.0",
     "@types/node": "^24",
     "@types/react": "^19",
     "@types/react-dom": "^19",

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
-import { Check, Info, Loader2, Leaf } from 'lucide-react';
+import { Info, Loader2, Leaf } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { MOCK_FORM_OPTIONS } from '@/data/formoptions';
+import { OrderSuccessCard } from './OrderSuccessCard';
 import {
   getOrderSubmitErrorMessage,
   normalizeOrderSubmitSuccessResponse,
@@ -262,37 +263,13 @@ export default function OrderFormSection({
 
   if (isSubmitted) {
     return (
-      <motion.div
-        initial={{ opacity: 0, y: 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="rounded-xl border border-[#D4D8CD] bg-white p-8 md:p-10 text-center"
-      >
-        <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#4A5D42]/10">
-          <Check className="h-8 w-8 text-[#4A5D42]" />
-        </div>
-        <h2 className="mt-6 text-2xl font-medium text-[#171611]">
-          {submissionResult?.duplicate ? '订单已经登记' : '登记已收到'}
-        </h2>
-        <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-[#6B7280] md:text-base">
-          {submissionResult?.message ?? options.successMessage}
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <Button
-            variant="outline"
-            className="w-full border-[#D4D8CD] text-[#4A5D42] hover:bg-[#4A5D42]/5 hover:text-[#4A5D42] sm:w-auto"
-            onClick={handleReset}
-          >
-            再登记一份
-          </Button>
-          <Button asChild className="w-full bg-[#4A5D42] hover:bg-[#3E5038] sm:w-auto">
-            <a href={returnHref}>返回首页</a>
-          </Button>
-        </div>
-      </motion.div>
+      <OrderSuccessCard
+        result={submissionResult}
+        returnHref={returnHref}
+        onReset={handleReset}
+      />
     );
   }
-
   return (
     <Card className="border-[#D4D8CD] bg-white shadow-sm">
       <CardContent className="p-6 md:p-8">

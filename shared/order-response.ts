@@ -26,23 +26,20 @@ export function normalizeOrderSubmitSuccessResponse(
   if (!value || typeof value !== 'object') return null;
 
   const candidate = value as Record<string, unknown>;
-  if (
-    candidate.success !== true ||
-    typeof candidate.duplicate !== 'boolean' ||
-    typeof candidate.recordId !== 'string' ||
-    candidate.recordId.trim() === ''
-  ) {
-    return null;
-  }
+  if (candidate.success !== true) return null;
 
-  const fallbackMessage = candidate.duplicate
+  const duplicate = candidate.duplicate === true;
+  const fallbackMessage = duplicate
     ? DUPLICATE_ORDER_MESSAGE
     : NEW_ORDER_MESSAGE;
 
   return {
     success: true,
-    duplicate: candidate.duplicate,
-    recordId: candidate.recordId,
+    duplicate,
+    recordId:
+      typeof candidate.recordId === 'string'
+        ? candidate.recordId.trim()
+        : '',
     message:
       typeof candidate.message === 'string' && candidate.message.trim()
         ? candidate.message

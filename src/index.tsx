@@ -1,14 +1,23 @@
-import { StrictMode } from "react";
+import { StrictMode, type ErrorInfo } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import { ErrorBoundary } from "react-error-boundary";
 import App from "./app";
 import "./index.css";
 
+function handleBoundaryError(error: Error, info: ErrorInfo) {
+  console.error("[页面错误边界] 捕获渲染异常", {
+    name: error.name,
+    message: error.message,
+    stack: error.stack,
+    componentStack: info.componentStack,
+  });
+}
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <BrowserRouter basename={process.env.CLIENT_BASE_PATH || "/"}>
       <ErrorBoundary
+        onError={handleBoundaryError}
         fallbackRender={({ resetErrorBoundary }) => (
           <main className="flex min-h-screen items-center justify-center bg-[#FAF8F3] px-4">
             <div className="max-w-md rounded-xl border border-[#D4D8CD] bg-white p-8 text-center shadow-sm">
