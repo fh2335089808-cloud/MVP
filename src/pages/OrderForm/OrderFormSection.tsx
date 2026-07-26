@@ -21,6 +21,11 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { MOCK_FORM_OPTIONS } from '@/data/formoptions';
+import {
+  getOrderSubmitErrorMessage,
+  normalizeOrderSubmitSuccessResponse,
+  type OrderSubmitSuccessResponse,
+} from '@shared/order-response';
 
 const DRAFT_KEY = 'order_form_draft';
 const IDEMPOTENCY_KEY = 'order_form_idempotency_key';
@@ -57,13 +62,17 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
   const options = MOCK_FORM_OPTIONS;
   const idempotencyKeyRef = useRef<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [isSubmitted, setIsSubmitted] = useState(() => {
+  const [submissionResult, setSubmissionResult] = useState<OrderSubmitSuccessResponse | null>(() => {
     try {
-      return Boolean(window.localStorage.getItem(SUBMISSION_RECEIPT_KEY));
+      const savedReceipt = window.localStorage.getItem(SUBMISSION_RECEIPT_KEY);
+      return savedReceipt
+        ? normalizeOrderSubmitSuccessResponse(JSON.parse(savedReceipt))
+        : null;
     } catch {
-      return false;
+      return null;
     }
   });
+  const isSubmitted = submissionResult !== null;
 
   const defaultValues = useMemo<FormData>(() => {
     let draft: Partial<FormData> = {};
@@ -188,31 +197,30 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
         signal: controller.signal,
       });
 
-      const result = await response.json().catch(() => null) as {
-        success?: boolean;
-        recordId?: string;
-        error?: string;
-        code?: string;
-      } | null;
+      const responseBody: unknown = await response.json().catch(() => null);
+      const result = normalizeOrderSubmitSuccessResponse(responseBody);
 
-      if (!response.ok || !result?.success) {
-        setSubmitError(result?.error || '提交失败，请稍后重试；您填写的内容已保留。');
-        console.error('[订单] 提交失败', { status: response.status, code: result?.code });
+      if (!response.ok || !result) {
+        const fallback = response.ok
+          ? '服务器返回的数据不完整，请稍后重试；您填写的内容已保留。'
+          : '提交失败，请稍后重试；您填写的内容已保留。';
+        setSubmitError(getOrderSubmitErrorMessage(responseBody, fallback));
+        console.error('[订单] 提交失败', { status: response.status });
         return;
       }
 
-      console.info('[订单] 提交成功', { recordId: result.recordId });
+      console.info('[订单] 提交成功', {
+        recordId: result.recordId,
+        duplicate: result.duplicate,
+      });
       try {
         window.localStorage.removeItem(DRAFT_KEY);
-        window.localStorage.setItem(
-          SUBMISSION_RECEIPT_KEY,
-          JSON.stringify({ recordId: result.recordId ?? null }),
-        );
+        window.localStorage.setItem(SUBMISSION_RECEIPT_KEY, JSON.stringify(result));
       } catch (storageError) {
         console.warn('保存提交结果失败:', String(storageError));
       }
 
-      setIsSubmitted(true);
+      setSubmissionResult(result);
       try {
         onSubmitSuccess?.();
       } catch (callbackError) {
@@ -244,7 +252,7 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
     idempotencyKeyRef.current = null;
     form.reset();
     setSubmitError(null);
-    setIsSubmitted(false);
+    setSubmissionResult(null);
   };
 
   if (isSubmitted) {
@@ -258,9 +266,11 @@ export default function OrderFormSection({ initialSrc, onSubmitSuccess }: OrderF
         <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-[#4A5D42]/10">
           <Check className="h-8 w-8 text-[#4A5D42]" />
         </div>
-        <h2 className="mt-6 text-2xl font-medium text-[#171611]">登记已收到</h2>
+        <h2 className="mt-6 text-2xl font-medium text-[#171611]">
+          {submissionResult?.duplicate ? '订单已经登记' : '登记已收到'}
+        </h2>
         <p className="mx-auto mt-4 max-w-md text-sm leading-relaxed text-[#6B7280] md:text-base">
-          {options.successMessage}
+          {submissionResult?.message ?? options.successMessage}
         </p>
         <Button
           variant="outline"

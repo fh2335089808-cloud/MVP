@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
 import { createRecord, ensureIdempotencyField, FeishuApiError, findRecordByIdempotencyKey, IDEMPOTENCY_FIELD_NAME } from '../services/feishu.js';
+import { createOrderSubmitSuccessResponse } from '../../shared/order-response.js';
 
 const router = Router();
 const optionalText = (maxLength: number) => z.string().trim().max(maxLength).optional().transform((value) => value || undefined);
@@ -80,7 +81,7 @@ router.post('/submit', async (req: Request, res: Response) => {
   try {
     const result = await submitToFeishu(parsed.data, idempotencyKey);
     console.info('[order] submission completed', { requestId, recordId: result.recordId, duplicate: result.duplicate });
-    res.json({ success: true, recordId: result.recordId, duplicate: result.duplicate });
+    res.json(createOrderSubmitSuccessResponse(result.recordId, result.duplicate));
   } catch (error) {
     console.error('[order] submission failed', { requestId, errorName: error instanceof Error ? error.name : 'UnknownError', operation: error instanceof FeishuApiError ? error.operation : undefined, httpStatus: error instanceof FeishuApiError ? error.httpStatus : undefined, feishuCode: error instanceof FeishuApiError ? error.feishuCode : undefined });
     const isConfigurationError = error instanceof Error && error.message.startsWith('Missing required');
